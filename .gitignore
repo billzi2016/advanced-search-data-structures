@@ -1,0 +1,27 @@
+.DS_Store
+
+# Python 缓存和测试产物
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE 和编辑器本地配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python 虚拟环境
+.venv/
+venv/
+env/
+
+# 日志和临时文件
+*.log
+tmp/
+temp/
