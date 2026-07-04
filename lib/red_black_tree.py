@@ -1,3 +1,10 @@
+"""红黑树。
+
+本模块实现插入版红黑树，用颜色约束维持近似平衡。
+红黑树没有 AVL 那么严格的高度平衡，但通过“根黑、红节点不相邻、
+从任一节点到叶子的黑节点数一致”等规则，把树高限制在 O(log n)。
+"""
+
 from dataclasses import dataclass
 
 
@@ -7,6 +14,12 @@ BLACK = "BLACK"
 
 @dataclass
 class _RBNode:
+    """红黑树内部节点。
+
+    parent 指针让旋转和插入修复可以从当前节点向上调整。
+    None 子节点在红黑树定义中视为黑色外部叶子。
+    """
+
     key: int
     color: str = RED
     left: "_RBNode | None" = None
@@ -15,11 +28,19 @@ class _RBNode:
 
 
 class RedBlackTree:
+    """集合语义的红黑树。
+
+    当前实现支持插入、查找、中序遍历和结构校验；删除尚未实现，
+    因此主测试会跳过红黑树删除场景。
+    """
+
     def __init__(self) -> None:
         # 这里使用 None 代表外部黑色哨兵叶子，节点本身只保存真实 key。
         self.root: _RBNode | None = None
 
     def insert(self, key: int) -> None:
+        """按 BST 规则插入红色新节点，然后修复红黑性质。"""
+
         # 先按普通 BST 规则找到插入位置，新节点默认染红。
         parent: _RBNode | None = None
         current = self.root
@@ -42,6 +63,8 @@ class RedBlackTree:
         self._fix_insert(node)
 
     def contains(self, key: int) -> bool:
+        """按 BST 路径查找 key 是否存在。"""
+
         node = self.root
         while node is not None:
             if key == node.key:
@@ -50,11 +73,15 @@ class RedBlackTree:
         return False
 
     def inorder(self) -> list[int]:
+        """返回所有 key 的升序列表。"""
+
         result: list[int] = []
         self._inorder(self.root, result)
         return result
 
     def validate(self) -> bool:
+        """检查根节点颜色、连续红节点约束和黑高一致性。"""
+
         # 红黑树根节点必须为黑色。
         if self.root is not None and self.root.color != BLACK:
             return False
@@ -62,6 +89,12 @@ class RedBlackTree:
         return self._validate_node(self.root)[0]
 
     def _validate_node(self, node: _RBNode | None) -> tuple[bool, int]:
+        """递归校验子树并返回校验结果和黑高。
+
+        黑高指从当前节点到任意外部叶子路径上的黑节点数量。
+        红黑树要求同一节点的左右子树黑高相同。
+        """
+
         if node is None:
             # None 叶子视为黑色，高度贡献 1。
             return True, 1
@@ -82,6 +115,12 @@ class RedBlackTree:
         return True, black_height
 
     def _fix_insert(self, node: _RBNode) -> None:
+        """修复插入红节点后可能出现的连续红节点问题。
+
+        处理分三类：叔叔为红时重新染色并向上递归；叔叔为黑且当前形态是折线时
+        先旋转成直线；直线形态下再通过一次旋转和变色恢复局部平衡。
+        """
+
         # 只要父节点是红色，就说明出现了连续红节点，需要向上修复。
         while node.parent is not None and node.parent.color == RED:
             parent = node.parent
@@ -137,6 +176,8 @@ class RedBlackTree:
             self.root.color = BLACK
 
     def _rotate_left(self, node: _RBNode) -> None:
+        """围绕 node 做左旋，并维护父指针和根指针。"""
+
         # 左旋保持中序顺序不变，只调整局部父子关系。
         pivot = node.right
         if pivot is None:
@@ -158,6 +199,8 @@ class RedBlackTree:
         node.parent = pivot
 
     def _rotate_right(self, node: _RBNode) -> None:
+        """围绕 node 做右旋，并维护父指针和根指针。"""
+
         # 右旋是左旋的镜像操作。
         pivot = node.left
         if pivot is None:
@@ -179,9 +222,13 @@ class RedBlackTree:
         node.parent = pivot
 
     def _color(self, node: _RBNode | None) -> str:
+        """读取节点颜色；None 外部叶子按黑色处理。"""
+
         return BLACK if node is None else node.color
 
     def _inorder(self, node: _RBNode | None, result: list[int]) -> None:
+        """递归中序遍历。"""
+
         if node is None:
             return
         self._inorder(node.left, result)

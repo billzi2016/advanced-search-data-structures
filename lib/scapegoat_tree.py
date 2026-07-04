@@ -1,9 +1,21 @@
+"""替罪羊树。
+
+替罪羊树是一种不在节点上保存高度、颜色或优先级的平衡搜索树。
+它允许插入路径暂时变深；当深度超过理论上界时，向上寻找第一个重量比例失衡的
+祖先节点，把这个局部子树整体重建成平衡树。删除过多时则触发全局重建。
+"""
+
 from dataclasses import dataclass
 import math
 
 
 @dataclass
 class _ScapegoatNode:
+    """替罪羊树内部节点。
+
+    parent 指针用于从新插入节点向上寻找失衡祖先，也用于局部重建后重新接回父节点。
+    """
+
     key: int
     left: "_ScapegoatNode | None" = None
     right: "_ScapegoatNode | None" = None
@@ -11,7 +23,16 @@ class _ScapegoatNode:
 
 
 class ScapegoatTree:
+    """集合语义的替罪羊树。"""
+
     def __init__(self, alpha: float = 0.7) -> None:
+        """创建替罪羊树。
+
+        参数:
+            alpha: 重量平衡参数，必须位于 (0.5, 1)。值越小越严格平衡，
+                但触发重建的频率也越高。
+        """
+
         if not 0.5 < alpha < 1:
             raise ValueError("alpha must be between 0.5 and 1")
         # alpha 越接近 0.5，树越严格平衡，重建也越频繁。
@@ -22,6 +43,8 @@ class ScapegoatTree:
         self.max_size = 0
 
     def insert(self, key: int) -> None:
+        """插入 key；如果插入深度过大，则局部重建失衡祖先子树。"""
+
         if self.root is None:
             self.root = _ScapegoatNode(key)
             self.size = 1
@@ -56,6 +79,8 @@ class ScapegoatTree:
                 self._rebuild_subtree(scapegoat)
 
     def contains(self, key: int) -> bool:
+        """按 BST 路径查找 key 是否存在。"""
+
         node = self.root
         while node is not None:
             if key == node.key:
@@ -64,6 +89,8 @@ class ScapegoatTree:
         return False
 
     def delete(self, key: int) -> None:
+        """删除 key；当当前规模比历史最大规模小太多时全局重建。"""
+
         # 替罪羊树删除本身按 BST 删除处理，规模下降过多时再全局重建。
         if not self.contains(key):
             return
@@ -83,15 +110,21 @@ class ScapegoatTree:
             self.max_size = 0
 
     def inorder(self) -> list[int]:
+        """返回所有 key 的升序列表。"""
+
         result: list[int] = []
         self._inorder(self.root, result)
         return result
 
     def _height_limit(self) -> float:
+        """计算当前规模允许的理论高度上界。"""
+
         # 理论高度上界约为 log_{1/alpha}(n)。
         return math.log(self.size, 1 / self.alpha) if self.size > 1 else 0
 
     def _find_scapegoat(self, node: _ScapegoatNode) -> _ScapegoatNode | None:
+        """从插入节点向上寻找第一个违反 alpha 重量平衡的祖先。"""
+
         child = node
         parent = node.parent
         while parent is not None:
@@ -103,6 +136,8 @@ class ScapegoatTree:
         return None
 
     def _rebuild_subtree(self, node: _ScapegoatNode) -> None:
+        """把指定子树收集为有序数组，再重建成高度平衡子树。"""
+
         # 中序收集得到有序节点数组，再按中点递归构造完全平衡子树。
         parent = node.parent
         nodes: list[_ScapegoatNode] = []
@@ -117,6 +152,8 @@ class ScapegoatTree:
             parent.right = rebuilt
 
     def _collect_nodes(self, node: _ScapegoatNode | None, nodes: list[_ScapegoatNode]) -> None:
+        """中序收集节点对象，保留 key 的升序顺序。"""
+
         if node is None:
             return
         # 中序收集可以保留 BST 的升序 key 顺序。
@@ -131,6 +168,12 @@ class ScapegoatTree:
         end: int,
         parent: _ScapegoatNode | None,
     ) -> _ScapegoatNode | None:
+        """用有序节点数组的中点递归构造平衡 BST。
+
+        注意这里复用原有节点对象，而不是创建新节点；因此必须重新写入
+        parent、left 和 right 指针，避免残留旧结构中的链接。
+        """
+
         if start >= end:
             return None
 
@@ -143,6 +186,8 @@ class ScapegoatTree:
         return node
 
     def _delete_node(self, node: _ScapegoatNode | None, key: int) -> _ScapegoatNode | None:
+        """执行普通 BST 删除，并维护 parent 指针。"""
+
         if node is None:
             return None
 
@@ -175,16 +220,22 @@ class ScapegoatTree:
         return node
 
     def _minimum(self, node: _ScapegoatNode) -> _ScapegoatNode:
+        """返回当前子树最小节点。"""
+
         while node.left is not None:
             node = node.left
         return node
 
     def _subtree_size(self, node: _ScapegoatNode | None) -> int:
+        """递归计算子树节点数，用于重量平衡判断。"""
+
         if node is None:
             return 0
         return 1 + self._subtree_size(node.left) + self._subtree_size(node.right)
 
     def _inorder(self, node: _ScapegoatNode | None, result: list[int]) -> None:
+        """递归中序遍历。"""
+
         if node is None:
             return
         self._inorder(node.left, result)
